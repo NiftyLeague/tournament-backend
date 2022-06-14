@@ -142,6 +142,8 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
     }
 
     await tournament.save ();
+
+    res.json ({ success: true, tournament });
 });
 
 module.exports = router;
