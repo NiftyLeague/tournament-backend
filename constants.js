@@ -2,10 +2,12 @@ module.exports = {
     TOURNAMENT_REGISTRATION_TIME: 60000,
     TOURNAMENT_START_TIME: 30000,
     ROUND_START_TIME: 20000,
+    ROUND_TIME: 600000,
     tournamentStatus: {
         REGISTRATION: 'registration',
         STARTING: 'starting',
-        STARTED: 'started',
+        LOBBY: 'lobby',
+        GAMEPLAY: 'gameplay',
         ENDED: 'ended',
         CANCELLED: 'cancelled'
     },

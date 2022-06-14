@@ -1,4 +1,4 @@
-const { TOURNAMENT_REGISTRATION_TIME, ROUND_START_TIME, tournamentStatus, roundStatus } = require ('../constants');
+const { TOURNAMENT_REGISTRATION_TIME, ROUND_START_TIME, ROUND_TIME, tournamentStatus, roundStatus } = require ('../constants');
 var { Tournament, Round } = require ('../schema/index');
 
 const asyncTimeout = (ms) => {
@@ -34,6 +34,14 @@ const startNextRoundAsync = async (tournamentId, waitTime) => {
 
     let tournament = await getTournamentById (tournamentId);
 
+    if (tournament.eligibleUserIds.length < 2) {
+        tournament.status = tournamentStatus.ENDED;
+
+        await tournament.save ();
+
+        return;
+    }
+
     let round = await new Round ({
         tournamentId: tournament._id,
         eligibleUserIds: tournament.eligibleUserIds,
@@ -41,6 +49,7 @@ const startNextRoundAsync = async (tournamentId, waitTime) => {
     });
     await round.save ();
     
+    tournament.status = tournamentStatus.LOBBY;
     tournament.roundNumber = tournament.roundNumber + 1;
     tournament.eligibleUserIds = [];
     await tournament.save ();
@@ -55,23 +64,26 @@ const isTournamentStarting = (tournament) => {
 const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
     await asyncTimeout (waitTime);
     
+    let tournament = await getTournamentById (tournamentId);
+
     let round = await Round.findById (roundId);
 
     round.status = roundStatus.CLOSED;
 
     if (round.joinedUserIds.length > 0) {
-        let tournament = await getTournamentById (tournamentId);
-
         for (let step = 0; step < 5; step++) {
             tournament.eligibleUserIds.push (round.joinedUserIds[step]);
         }
 
-        await tournament.save ();
-
         round.joinedUserIds = [];
     }
+    
+    tournament.status = tournamentStatus.GAMEPLAY;
+    await tournament.save ();
 
     await round.save ();
+
+    startNextRoundAsync (tournamentId, ROUND_TIME);
 }
 
 module.exports = {
