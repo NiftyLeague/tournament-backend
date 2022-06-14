@@ -57,8 +57,8 @@ const startNextRoundAsync = async (tournamentId, waitTime) => {
     closeRoundAsync (tournamentId, round._id, ROUND_START_TIME);
 }
 
-const isTournamentStarting = (tournament) => {
-    return tournament.registeredUserIds.length > tournament.minUsers;
+const canTournamentBeStarted = (tournament) => {
+    return tournament.registeredUserIds.length >= tournament.minUsers && tournament.status == tournamentStatus.REGISTRATION;
 }
 
 const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
@@ -91,5 +91,5 @@ module.exports = {
     getTournamentById,
     terminateIfUnderRegistered,
     startNextRoundAsync,
-    isTournamentStarting
+    canTournamentBeStarted
 };

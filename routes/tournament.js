@@ -3,7 +3,7 @@ var router = express.Router();
 
 const { TOURNAMENT_START_TIME, tournamentStatus, roundStatus } = require ('../constants');
 var { Tournament } = require ('../schema/index');
-const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, isTournamentStarting } = require ('../services/tournament-service');
+const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
 
 router.get ('/byId/:tournamentId', async (req, res, next) => {
@@ -35,19 +35,44 @@ router.post ('/signup', async (req, res, next) => {
 
     if (!tournament) {
         tournament = await new Tournament ({
-            minUsers: 4
+            minUsers: 2
         });
 
         terminateIfUnderRegistered (tournament._id);
     }
 
-    tournament.registeredUserIds.push (userId);
+    if (tournament.status == tournamentStatus.REGISTRATION) {
+        tournament.registeredUserIds.push (userId);
 
-    if (isTournamentStarting (tournament)) {
-        tournament.status = tournamentStatus.STARTING;
-        tournament.eligibleUserIds = tournament.registeredUserIds;
+        if (canTournamentBeStarted (tournament)) {
+            tournament.status = tournamentStatus.STARTING;
+            tournament.eligibleUserIds = tournament.registeredUserIds;
 
-        startNextRoundAsync (tournament._id, TOURNAMENT_START_TIME);
+            startNextRoundAsync (tournament._id, TOURNAMENT_START_TIME);
+        }
+
+        await tournament.save ();
+    } else if (tournament.status == tournamentStatus.STARTING) {
+        tournament.eligibleUserIds.push (userId);
+
+        await tournament.save ();
+    }
+
+    res.json ({ success: true, tournament });
+});
+
+router.post ('/signout', async (req, res, next) => {
+    const { userId, authToken } = req.body;
+
+    let tournament = await getOpenTournament ();
+
+    if (!tournament) {
+        return res.json ({ success: false });
+    }
+
+    const index = tournament.registeredUserIds.indexOf (userId);
+    if (index > -1) {
+        tournament.registeredUserIds.splice (index, 1);
     }
 
     await tournament.save ();
@@ -70,13 +95,6 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     if (!round) {
         return res.json ({ success: false, round, error: 'Round not found' });
     } else if (round.status == roundStatus.CLOSED) {
-        let index = round.eligibleUserIds.indexOf (userId);
-        if (index > -1) {
-            round.eligibleUserIds.splice (index, 1);
-        }
-
-        await round.save ();
-
         return res.json ({ success: false, round, errror: 'You are late to round' });
     }
     
