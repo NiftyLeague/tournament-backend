@@ -52,6 +52,7 @@ const startNextRoundAsync = async (tournamentId, waitTime) => {
     tournament.status = tournamentStatus.LOBBY;
     tournament.roundNumber = tournament.roundNumber + 1;
     tournament.eligibleUserIds = [];
+    tournament.nextStepTime = Date.now() + ROUND_START_TIME;
     await tournament.save ();
 
     closeRoundAsync (tournamentId, round._id, ROUND_START_TIME);

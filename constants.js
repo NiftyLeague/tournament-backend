@@ -14,5 +14,14 @@ module.exports = {
     roundStatus: {
         OPEN: 'open',
         CLOSED: 'closed'
+    },
+    requestTypes: {
+        BY_ID: 'tournamentById',
+        OPEN_TOURNAMENT: 'openTournament',
+        SIGNUP: 'signup',
+        SIGNOUT: 'signout',
+        JOINLOBBY: 'joinLobby',
+        MATCH_STARTED: 'matchStarted',
+        MATCH_ENDED: 'matchEnded'
     }
 }

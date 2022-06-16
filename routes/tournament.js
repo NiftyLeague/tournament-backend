@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const { TOURNAMENT_START_TIME, tournamentStatus, roundStatus } = require ('../constants');
+const { TOURNAMENT_START_TIME, tournamentStatus, roundStatus, requestTypes } = require ('../constants');
 var { Tournament } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
@@ -12,20 +12,20 @@ router.get ('/byId/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false });
+        return res.json ({ success: false, requestType: requestTypes.BY_ID });
     }
 
-    res.json ({ success: true, tournament });
+    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament });
 });
 
 router.get ('/openTournament', async (req, res, next) => {
     const tournament = await getOpenTournament ();
 
     if (!tournament) {
-        return res.json ({ success: false });
+        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT });
     }
 
-    res.json ({ success: true, tournament });
+    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament });
 });
 
 router.post ('/signup', async (req, res, next) => {
@@ -35,7 +35,8 @@ router.post ('/signup', async (req, res, next) => {
 
     if (!tournament) {
         tournament = await new Tournament ({
-            minUsers: 2
+            minUsers: 2,
+            nextStepTime: Date.now() + TOURNAMENT_START_TIME
         });
 
         terminateIfUnderRegistered (tournament._id);
@@ -58,7 +59,7 @@ router.post ('/signup', async (req, res, next) => {
         await tournament.save ();
     }
 
-    res.json ({ success: true, tournament });
+    res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament });
 });
 
 router.post ('/signout', async (req, res, next) => {
@@ -67,17 +68,17 @@ router.post ('/signout', async (req, res, next) => {
     let tournament = await getOpenTournament ();
 
     if (!tournament) {
-        return res.json ({ success: false });
+        return res.json ({ success: false, requestType: requestTypes.SIGNOUT });
     }
 
     const index = tournament.registeredUserIds.indexOf (userId);
     if (index > -1) {
         tournament.registeredUserIds.splice (index, 1);
+
+        await tournament.save ();
     }
 
-    await tournament.save ();
-
-    res.json ({ success: true, tournament });
+    res.json ({ success: true, requestType: requestTypes.SIGNOUT, tournament });
 });
 
 router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
@@ -87,15 +88,15 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, tournament, error: 'Tournament not found' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, tournament, error: 'Tournament not found' });
     }
 
     let round = await getRoundByTournament (tournament._id, tournament.roundNumber);
 
     if (!round) {
-        return res.json ({ success: false, round, error: 'Round not found' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, error: 'Round not found' });
     } else if (round.status == roundStatus.CLOSED) {
-        return res.json ({ success: false, round, errror: 'You are late to round' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, errror: 'You are late to round' });
     }
     
     round.joinedUserIds.push (userId);
@@ -107,7 +108,7 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
 
     await round.save ();
 
-    res.json ({ success: true, round });
+    res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round });
 });
 
 router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
@@ -117,13 +118,13 @@ router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, tournament });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, tournament });
     }
 
     let round = await getRoundByTournament (tournament._id, tournament.roundNumber);
 
     if (!round) {
-        return res.json ({ success: false, round });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, round });
     }
 
     round.matchedUserIds.push (userIdMaster);
@@ -140,7 +141,7 @@ router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
 
     await round.save ();
 
-    res.json ({ success: true, round });
+    res.json ({ success: true, requestType: requestTypes.MATCH_STARTED, round });
 });
 
 router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
@@ -150,7 +151,7 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, tournament });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, tournament });
     }
 
     if (hasMasterWon) {
@@ -161,7 +162,7 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
 
     await tournament.save ();
 
-    res.json ({ success: true, tournament });
+    res.json ({ success: true, requestType: requestTypes.MATCH_ENDED, tournament });
 });
 
 module.exports = router;

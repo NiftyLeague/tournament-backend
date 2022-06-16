@@ -7,6 +7,7 @@ const tournamentSchema = new Schema ({
     registeredUserIds: [],
     eligibleUserIds: [],
     roundNumber: { type: Number, default: 0 },
-    minUsers: Number
+    minUsers: Number,
+    nextStepTime: Number
 }, { collection: 'tournaments', timestamps: { createdAt: 'created', updatedAt: 'updated' }});
 module.exports = models.Tournament || model ('Tournament', tournamentSchema);
