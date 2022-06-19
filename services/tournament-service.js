@@ -1,4 +1,5 @@
 const { TOURNAMENT_REGISTRATION_TIME, ROUND_START_TIME, ROUND_TIME, tournamentStatus, roundStatus } = require ('../constants');
+const { leaveTournament } = require ('../services/player-service');
 var { Tournament, Round } = require ('../schema/index');
 
 const asyncTimeout = (ms) => {
@@ -31,6 +32,10 @@ const terminateIfUnderRegistered = async (tournamentId) => {
 
     tournament.status = tournamentStatus.CANCELLED;
     await tournament.save ();
+    
+    for (let step = 0; step < tournament.registeredUserIds.length; step++) {
+        await leaveTournament (tournament.registeredUserIds[step], tournamentId);
+    }
 }
 
 const startNextRoundAsync = async (tournamentId, waitTime) => {
@@ -76,7 +81,7 @@ const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
     round.status = roundStatus.CLOSED;
 
     if (round.joinedUserIds.length > 0) {
-        for (let step = 0; step < 5; step++) {
+        for (let step = 0; step < round.joinedUserIds.length; step++) {
             tournament.eligibleUserIds.push (round.joinedUserIds[step]);
         }
 

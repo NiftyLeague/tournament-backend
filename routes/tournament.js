@@ -1,53 +1,69 @@
 var express = require('express');
 var router = express.Router();
 
-const { TOURNAMENT_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
-var { Tournament, Player } = require ('../schema/index');
+const { TOURNAMENT_REGISTRATION_TIME, TOURNAMENT_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
+var { Tournament } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
 const { getPlayerById, signup, signout, disQualify } = require ('../services/player-service');
+const { getSecondsLeft } = require ('../services/time-service');
 
 router.get ('/byId/:tournamentId/:userId', async (req, res, next) => {
     const { tournamentId, userId } = req.params;
+
+    if (!tournamentId || !userId) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
 
     const player = await getPlayerById (userId);
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.BY_ID, player });
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Tournament not found', player });
     }
 
-    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament, player });
+    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament, player, timeLeft: getSecondsLeft (tournament) });
 });
 
 router.get ('/openTournament/:userId', async (req, res, next) => {
     const { userId } = req.params;
 
+    if (!userId) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
+
     const player = await getPlayerById (userId);
     const tournament = await getOpenTournament ();
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT, player });
+        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT, error: 'Tournament not found', player });
     }
 
-    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament, player });
+    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament, player, timeLeft: getSecondsLeft (tournament) });
 });
 
 router.post ('/signup', async (req, res, next) => {
     const { userId, authToken } = req.body;
+
+    if (!userId) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
 
     let tournament = await getOpenTournament ();
 
     if (!tournament) {
         tournament = await new Tournament ({
             minUsers: 2,
-            nextStepTime: Date.now() + TOURNAMENT_START_TIME
+            nextStepTime: Date.now() + TOURNAMENT_REGISTRATION_TIME
         });
 
         terminateIfUnderRegistered (tournament._id);
     }
 
-    if (tournament.status == tournamentStatus.REGISTRATION) {
+    if (tournament.registeredUserIds.indexOf (userId) != -1) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Already registered' });
+    }
+    else if (tournament.status == tournamentStatus.REGISTRATION) {
         tournament.registeredUserIds.push (userId);
 
         if (canTournamentBeStarted (tournament)) {
@@ -66,11 +82,15 @@ router.post ('/signup', async (req, res, next) => {
 
     const player = await signup (userId, tournament._id);
 
-    res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament, player });
+    res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament, player, timeLeft: getSecondsLeft (tournament) });
 });
 
 router.post ('/signout', async (req, res, next) => {
     const { userId, authToken } = req.body;
+
+    if (!userId) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
 
     let player = null;
     let tournament = await getOpenTournament ();
@@ -78,7 +98,7 @@ router.post ('/signout', async (req, res, next) => {
     if (!tournament) {
         player = await getPlayerById (userId);
 
-        return res.json ({ success: false, requestType: requestTypes.SIGNOUT, player });
+        return res.json ({ success: false, requestType: requestTypes.SIGNOUT, error: 'Tournament not found', player });
     }
 
     const index = tournament.registeredUserIds.indexOf (userId);
@@ -86,16 +106,24 @@ router.post ('/signout', async (req, res, next) => {
         tournament.registeredUserIds.splice (index, 1);
 
         await tournament.save ();
+
+        player = await signout (userId);
+    
+        res.json ({ success: true, requestType: requestTypes.SIGNOUT, tournament, player, timeLeft: getSecondsLeft (tournament) });
+    } else {
+        player = await getPlayerById (userId);
+
+        res.json ({ success: false, requestType: requestTypes.SIGNOUT, error: 'Player not registered', tournament, player, timeLeft: getSecondsLeft (tournament) });
     }
-
-    player = await signout (userId);
-
-    res.json ({ success: true, requestType: requestTypes.SIGNOUT, tournament, player });
 });
 
 router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     const { tournamentId } = req.params;
     const { userId, authToken } = req.body;
+
+    if (!tournamentId || !userId) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
 
     let player = null;
     const tournament = await getTournamentById (tournamentId);
@@ -129,24 +157,28 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
 
     player = await joinRound (userId, round._id);
 
-    res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round, player });
+    res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round, player, timeLeft: getSecondsLeft (tournament) });
 });
 
 router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
     const { tournamentId } = req.params;
     const { userIdMaster, userIdOpponent, authToken } = req.body;
 
+    if (!tournamentId || !userIdMaster || !userIdOpponent) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
+
     const player = await getPlayerById (userId);
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, tournament, player });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, error: 'Tournament not found', tournament, player });
     }
 
     let round = await getRoundByTournament (tournament._id, tournament.roundNumber);
 
     if (!round) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, round, player });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, error: 'Round not found', tournament, round, player });
     }
 
     round.matchedUserIds.push (userIdMaster);
@@ -170,11 +202,15 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
     const { tournamentId } = req.params;
     const { userIdMaster, userIdOpponent, hasMasterWon, authToken } = req.body;
 
-    let player = await getPlayerById (userIdMaster);
+    if (!tournamentId || !userIdMaster || !userIdOpponent) {
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
+    }
+
+    const player = await getPlayerById (userIdMaster);
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, tournament, player });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, error: 'Tournament not found', tournament, player });
     }
 
     if (hasMasterWon) {

@@ -70,11 +70,26 @@ const joinRound = async (userId, roundId) => {
     return player;
 }
 
+const leaveTournament = async (userId, tournamentId) => {
+    let player = await getPlayerById (userId);
+
+    if (player.tournamentId != tournamentId) {
+        return;
+    }
+
+    player.tournamentId = '';
+    player.roundId = '';
+    player.status = playerStatus.UNREGISTERED;
+
+    await player.save ();
+}
+
 module.exports = {
     getPlayerById,
     updatePlayerById,
     signup,
     signout,
     disQualify,
-    joinRound
+    joinRound,
+    leaveTournament
 }
