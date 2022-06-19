@@ -9,10 +9,6 @@ router.get ('/:userId', async (req, res, next) => {
 
     const player = await getPlayerById (userId);
 
-    if (!player) {
-        return res.json ({ success: false, requestType: requestTypes.PLAYER_BY_ID });
-    }
-
     res.json ({ success: true, requestType: requestTypes.PLAYER_BY_ID, player });
 });
 

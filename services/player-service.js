@@ -1,7 +1,12 @@
 var { Player } = require ('../schema/index');
 
 const getPlayerById = async (userId) => {
-    const player = Player.findOne ({ userId });
+    let player = Player.findOne ({ userId });
+
+    if (!player) {
+        player = await new Player ({ userId });
+        await player.save ();
+    }
 
     return player;
 }
