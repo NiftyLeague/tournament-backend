@@ -4,6 +4,7 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var tournamentRouter = require('./routes/tournament');
+var playerRouter = require('./routes/player');
 
 const db = require('./dbConnection');
 db.init().then(() => {
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use('/', indexRouter);
 app.use('/tournament', tournamentRouter);
+app.use('/player', playerRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

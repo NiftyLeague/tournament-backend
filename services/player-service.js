@@ -5,3 +5,7 @@ const getPlayerById = async (userId) => {
 
     return player;
 }
+
+module.exports = {
+    getPlayerById
+}

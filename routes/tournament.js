@@ -7,7 +7,8 @@ const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startN
 const { getRoundByTournament } = require ('../services/round-service');
 
 router.get ('/byId/:tournamentId', async (req, res, next) => {
-    const { tournamentId, userId } = req.params;
+    const { tournamentId } = req.params;
+    const { userId } = req.body;
 
     const tournament = await getTournamentById (tournamentId);
 

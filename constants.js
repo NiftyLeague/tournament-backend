@@ -21,6 +21,7 @@ module.exports = {
         CLOSED: 'closed'
     },
     requestTypes: {
+        PLAYER_BY_ID: 'playerById',
         BY_ID: 'tournamentById',
         OPEN_TOURNAMENT: 'openTournament',
         SIGNUP: 'signup',
