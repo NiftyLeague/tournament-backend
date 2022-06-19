@@ -1,31 +1,42 @@
 var express = require('express');
 var router = express.Router();
 
-const { TOURNAMENT_START_TIME, tournamentStatus, roundStatus, requestTypes } = require ('../constants');
-var { Tournament } = require ('../schema/index');
+const { TOURNAMENT_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
+var { Tournament, Player } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
 
 router.get ('/byId/:tournamentId', async (req, res, next) => {
-    const { tournamentId } = req.params;
+    const { tournamentId, userId } = req.params;
 
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.BY_ID });
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, playerState: playerStatus.UNREGISTERED });
     }
 
-    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament });
+    let playerState = playerStatus.UNREGISTERED;
+    if (userId) {
+        if (tournament.registeredUserIds.indexOf (userId) != -1) {
+            playerState = playerStatus.REGISTERED;
+        }
+
+        if (tournament.round > 0 && tournament.eligibleUserIds.indexOf (userId) == -1) {
+            playerState = playerStatus.DISQUALIFIED;
+        }
+    }
+
+    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament, playerState });
 });
 
 router.get ('/openTournament', async (req, res, next) => {
     const tournament = await getOpenTournament ();
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT });
+        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT, playerState: playerStatus.UNREGISTERED });
     }
 
-    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament });
+    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament, playerState: playerStatus.UNREGISTERED });
 });
 
 router.post ('/signup', async (req, res, next) => {
@@ -59,7 +70,7 @@ router.post ('/signup', async (req, res, next) => {
         await tournament.save ();
     }
 
-    res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament });
+    res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament, playerState: playerStatus.REGISTERED });
 });
 
 router.post ('/signout', async (req, res, next) => {
@@ -68,7 +79,7 @@ router.post ('/signout', async (req, res, next) => {
     let tournament = await getOpenTournament ();
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.SIGNOUT });
+        return res.json ({ success: false, requestType: requestTypes.SIGNOUT, playerState: playerStatus.UNREGISTERED });
     }
 
     const index = tournament.registeredUserIds.indexOf (userId);
@@ -78,7 +89,7 @@ router.post ('/signout', async (req, res, next) => {
         await tournament.save ();
     }
 
-    res.json ({ success: true, requestType: requestTypes.SIGNOUT, tournament });
+    res.json ({ success: true, requestType: requestTypes.SIGNOUT, tournament, playerState: playerStatus.UNREGISTERED });
 });
 
 router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
@@ -88,15 +99,15 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, tournament, error: 'Tournament not found' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, tournament, error: 'Tournament not found', playerState: playerStatus.UNREGISTERED });
     }
 
     let round = await getRoundByTournament (tournament._id, tournament.roundNumber);
 
     if (!round) {
-        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, error: 'Round not found' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, error: 'Round not found', playerState: playerStatus.UNREGISTERED });
     } else if (round.status == roundStatus.CLOSED) {
-        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, errror: 'You are late to round' });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, errror: 'You are late to round', playerState: playerStatus.DISQUALIFIED });
     }
     
     round.joinedUserIds.push (userId);
@@ -108,7 +119,7 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
 
     await round.save ();
 
-    res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round });
+    res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round, playerState: playerStatus.REGISTERED });
 });
 
 router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
@@ -118,13 +129,13 @@ router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, tournament });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, tournament, playerState: playerStatus.UNREGISTERED });
     }
 
     let round = await getRoundByTournament (tournament._id, tournament.roundNumber);
 
     if (!round) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, round });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_STARTED, round, playerState: playerStatus.UNREGISTERED });
     }
 
     round.matchedUserIds.push (userIdMaster);
@@ -141,7 +152,7 @@ router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
 
     await round.save ();
 
-    res.json ({ success: true, requestType: requestTypes.MATCH_STARTED, round });
+    res.json ({ success: true, requestType: requestTypes.MATCH_STARTED, round, playerState: playerStatus.REGISTERED });
 });
 
 router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
@@ -151,18 +162,20 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, tournament });
+        return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, tournament, playerState: playerStatus.UNREGISTERED });
     }
 
+    let playerState = playerStatus.REGISTERED;
     if (hasMasterWon) {
         tournament.eligibleUserIds.push (userIdMaster);
     } else {
         tournament.eligibleUserIds.push (userIdOpponent);
+        playerState = playerStatus.DISQUALIFIED;
     }
 
     await tournament.save ();
 
-    res.json ({ success: true, requestType: requestTypes.MATCH_ENDED, tournament });
+    res.json ({ success: true, requestType: requestTypes.MATCH_ENDED, tournament, playerState });
 });
 
 module.exports = router;

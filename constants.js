@@ -11,6 +11,11 @@ module.exports = {
         ENDED: 'ended',
         CANCELLED: 'cancelled'
     },
+    playerStatus: {
+        UNREGISTERED: 'unregistered',
+        REGISTERED: 'registered',
+        DISQUALIFIED: 'disqualified'
+    },
     roundStatus: {
         OPEN: 'open',
         CLOSED: 'closed'
