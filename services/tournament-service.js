@@ -6,13 +6,17 @@ const asyncTimeout = (ms) => {
 }
 
 const getOpenTournament = async () => {
-    const tournament = Tournament.findOne ({ status: tournamentStatus.REGISTRATION });
+    let tournament = await Tournament.findOne ({ status: tournamentStatus.REGISTRATION });
+
+    if (!tournament) {
+        tournament = await Tournament.findOne ({ status: tournamentStatus.STARTING });
+    }
 
     return tournament;
 }
 
 const getTournamentById = async (tournamentId) => {
-    const tournament = Tournament.findById (tournamentId);
+    const tournament = await Tournament.findById (tournamentId);
 
     return tournament;
 }
