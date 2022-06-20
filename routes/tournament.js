@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const { TOURNAMENT_REGISTRATION_TIME, TOURNAMENT_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
+const { TOURNAMENT_REGISTRATION_TIME, TOURNAMENT_START_TIME, ROUND_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
 var { Tournament } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
@@ -49,6 +49,7 @@ router.post ('/signup', async (req, res, next) => {
         return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
     }
 
+    let player = null;
     let tournament = await getOpenTournament ();
 
     if (!tournament) {
@@ -61,7 +62,9 @@ router.post ('/signup', async (req, res, next) => {
     }
 
     if (tournament.registeredUserIds.indexOf (userId) != -1) {
-        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Already registered' });
+        player = await getPlayerById (userId);
+
+        return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Already registered', tournament, player });
     }
     else if (tournament.status == tournamentStatus.REGISTRATION) {
         tournament.registeredUserIds.push (userId);
@@ -69,18 +72,20 @@ router.post ('/signup', async (req, res, next) => {
         if (canTournamentBeStarted (tournament)) {
             tournament.status = tournamentStatus.STARTING;
             tournament.eligibleUserIds = tournament.registeredUserIds;
+            tournament.nextStepTime = Date.now() + ROUND_START_TIME;
 
             startNextRoundAsync (tournament._id, TOURNAMENT_START_TIME);
         }
 
         await tournament.save ();
     } else if (tournament.status == tournamentStatus.STARTING) {
+        tournament.registeredUserIds.push (userId);
         tournament.eligibleUserIds.push (userId);
 
         await tournament.save ();
     }
 
-    const player = await signup (userId, tournament._id);
+    player = await signup (userId, tournament._id);
 
     res.json ({ success: true, requestType: requestTypes.SIGNUP, tournament, player, timeLeft: getSecondsLeft (tournament) });
 });
