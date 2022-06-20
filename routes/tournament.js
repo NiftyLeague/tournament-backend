@@ -5,7 +5,7 @@ const { TOURNAMENT_REGISTRATION_TIME, TOURNAMENT_START_TIME, ROUND_START_TIME, t
 var { Tournament } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
-const { getPlayerById, signup, signout, disQualify } = require ('../services/player-service');
+const { getPlayerById, signup, signout, disQualify, joinRound } = require ('../services/player-service');
 const { getSecondsLeft } = require ('../services/time-service');
 
 router.get ('/byId/:tournamentId/:userId', async (req, res, next) => {
@@ -148,7 +148,7 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     } else if (round.status == roundStatus.CLOSED) {
         player = await disQualify (userId);
 
-        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, errror: 'You are late to round', player });
+        return res.json ({ success: false, requestType: requestTypes.JOINLOBBY, round, error: 'You are late to round', player });
     }
     
     round.joinedUserIds.push (userId);
