@@ -173,7 +173,7 @@ router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
         return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
     }
 
-    const player = await getPlayerById (userId);
+    const player = await getPlayerById (userIdMaster);
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {

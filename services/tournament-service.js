@@ -100,6 +100,7 @@ const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
     }
     
     tournament.status = tournamentStatus.GAMEPLAY;
+    tournament.nextStepTime = Date.now () + ROUND_TIME;
     await tournament.save ();
 
     await round.save ();
