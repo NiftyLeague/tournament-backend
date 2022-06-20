@@ -1,5 +1,5 @@
 const { TOURNAMENT_REGISTRATION_TIME, ROUND_START_TIME, ROUND_TIME, tournamentStatus, roundStatus } = require ('../constants');
-const { leaveTournament } = require ('../services/player-service');
+const { leaveTournament, disQualify } = require ('../services/player-service');
 const { getRoundById } = require ('../services/round-service');
 var { Tournament, Round } = require ('../schema/index');
 
@@ -94,6 +94,14 @@ const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
     if (round.joinedUserIds.length > 0) {
         for (let step = 0; step < round.joinedUserIds.length; step++) {
             tournament.eligibleUserIds.push (round.joinedUserIds[step]);
+        }
+
+        round.joinedUserIds = [];
+    }
+
+    if (round.eligibleUserIds.length > 0) {
+        for (let step = 0; step < round.eligibleUserIds.length; step++) {
+            await disQualify (round.eligibleUserIds[step]);
         }
 
         round.joinedUserIds = [];
