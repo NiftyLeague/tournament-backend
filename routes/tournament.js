@@ -22,7 +22,12 @@ router.get ('/byId/:tournamentId/:userId', async (req, res, next) => {
         return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Tournament not found', player });
     }
 
-    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament, player, timeLeft: getSecondsLeft (tournament) });
+    let round = null;
+    if (tournament.roundNumber > 0) {
+        round = await getRoundByTournament (tournamentId, tournament.roundNumber);
+    }
+
+    res.json ({ success: true, requestType: requestTypes.BY_ID, tournament, round, player, timeLeft: getSecondsLeft (tournament) });
 });
 
 router.get ('/openTournament/:userId', async (req, res, next) => {
