@@ -31,7 +31,7 @@ app.use ((req, res, next) => {
 });
 app.use((err, req, res, next) => {
   logger.error({ message: JSON.stringify(err), err });
-  res.status(err.status || 500).json ({ message: 'Error' }).end();
+  res.status(err.status || 500).json ({ success: false, message: JSON.stringify(err), err }).end();
 });
 
 module.exports = app;
