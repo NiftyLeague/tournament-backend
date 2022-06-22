@@ -2,11 +2,12 @@ var express = require('express');
 var router = express.Router();
 
 const { TOURNAMENT_REGISTRATION_TIME, TOURNAMENT_START_TIME, ROUND_START_TIME, tournamentStatus, playerStatus, roundStatus, requestTypes } = require ('../constants');
-var { Tournament } = require ('../schema/index');
+var { Tournament, Match } = require ('../schema/index');
 const { getOpenTournament, getTournamentById, terminateIfUnderRegistered, startNextRoundAsync, canTournamentBeStarted } = require ('../services/tournament-service');
 const { getRoundByTournament } = require ('../services/round-service');
 const { getPlayerById, signup, signout, disQualify, joinRound } = require ('../services/player-service');
 const { getSecondsLeft } = require ('../services/time-service');
+const { getMatch } = require ('../services/match-service');
 
 router.get ('/byId/:tournamentId/:userId', async (req, res, next) => {
     const { tournamentId, userId } = req.params;
@@ -167,7 +168,34 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
 
     player = await joinRound (userId, round._id);
 
+    if (round.joinedUserIds.length % 2 == 0) {
+        let match = await new Match ({
+            tournamentId: round.tournamentId,
+            isStarted: false,
+            home: round.joinedUserIds[round.joinedUserIds.length - 1],
+            away: round.joinedUserIds[round.joinedUserIds.length - 2]
+        });
+
+        await match.save ();
+    }
+
     res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round, player, timeLeft: getSecondsLeft (tournament) });
+});
+
+router.get ('/matchByTournamentId/:tournamentId/:userId', async (req, res, next) => {
+    const { tournamentId, userId } = req.params;
+
+    if (!tournamentId || !userId) {
+        return res.json ({ success: false, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, error: 'Parameters not defined' });
+    }
+
+    const match = await getMatch (tournamentId, userId);
+
+    if (!match) {
+        return res.json ({ success: false, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, error: 'Match not found' });
+    }
+    
+    return res.json ({ success: true, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, match });
 });
 
 router.post ('/matchStarted/:tournamentId', async (req, res, next) => {

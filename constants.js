@@ -25,6 +25,7 @@ module.exports = {
         PLAYER_LEAVE: 'playerLeave',
         BY_ID: 'tournamentById',
         ROUND_BY_TOURNAMENT_ID: 'roundByTournamentId',
+        MATCH_BY_TOURNAMENT_ID: 'matchByTournamentId',
         OPEN_TOURNAMENT: 'openTournament',
         SIGNUP: 'signup',
         SIGNOUT: 'signout',
