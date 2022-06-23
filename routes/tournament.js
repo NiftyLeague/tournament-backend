@@ -199,6 +199,29 @@ router.get ('/matchByTournamentId/:tournamentId/:roundNumber/:userId', async (re
     return res.json ({ success: true, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, match });
 });
 
+router.get ('/getUsernames/:tournamentId', async (req, res, next) => {
+    const { tournamentId } = req.params;
+
+    if (!tournamentId) {
+        return res.json ({ success: false, requestType: requestTypes.GET_USERNAMES, error: 'Parameters not defined' });
+    }
+
+    const tournament = await getTournamentById (tournamentId);
+
+    if (!tournament) {
+        return res.json ({ success: false, requestType: requestTypes.GET_USERNAMES, error: 'Tournament not found', tournament, player });
+    }
+
+    let players = [];
+    for (let step = 0; step < tournament.registeredUserIds.length; step++) {
+        let player = await getPlayerById (tournament.registeredUserIds[step]);
+
+        players.push ({ userId: player.userId, username: player.username });
+    }
+    
+    return res.json ({ success: true, requestType: requestTypes.GET_USERNAMES, players });
+});
+
 router.post ('/matchStarted/:tournamentId', async (req, res, next) => {
     const { tournamentId } = req.params;
     const { userIdMaster, userIdOpponent, authToken } = req.body;
