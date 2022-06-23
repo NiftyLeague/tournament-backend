@@ -16,6 +16,26 @@ router.get ('/:userId', async (req, res, next) => {
     res.json ({ success: true, requestType: requestTypes.PLAYER_BY_ID, player });
 });
 
+router.post ('/setUsername/:userId', async (req, res, next) => {
+    const { userId } = req.params;
+    const { username, authToken } = req.body;
+
+    if (!userId) {
+        return res.json ({ success: false, requestType: requestTypes.PLAYER_SET_USERNAME, error: 'Parameters not defined' });
+    }
+
+    const player = await getPlayerById (userId);
+
+    if (!player) {
+        return res.json ({ success: false, requestType: requestTypes.PLAYER_SET_USERNAME, error: 'Player not found' });
+    }
+
+    player.username = username;
+    await player.save ();
+
+    res.json ({ success: true, requestType: requestTypes.PLAYER_SET_USERNAME, player });
+});
+
 router.post ('/leave', async (req, res, next) => {
     const { userId, authToken } = req.body;
 

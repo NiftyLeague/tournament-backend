@@ -4,6 +4,7 @@ const { playerStatus } = require ('../constants');
 const playerSchema = new Schema ({
     status: { type: String, enum: Object.values (playerStatus), default: playerStatus.UNREGISTERED },
     userId: String,
+    username: String,
     tournamentId: String,
     roundId: String
 }, { collection: 'players', timestamps: { createdAt: 'created', updatedAt: 'updated' }});

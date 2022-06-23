@@ -22,6 +22,7 @@ module.exports = {
     },
     requestTypes: {
         PLAYER_BY_ID: 'playerById',
+        PLAYER_SET_USERNAME: 'playerSetUsername',
         PLAYER_LEAVE: 'playerLeave',
         BY_ID: 'tournamentById',
         ROUND_BY_TOURNAMENT_ID: 'roundByTournamentId',
