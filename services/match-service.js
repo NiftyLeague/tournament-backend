@@ -1,10 +1,10 @@
 var { Match } = require ('../schema/index');
 
-const getMatch = async (tournamentId, userId) => {
-    let match = await Match.findOne ({ tournamentId, home: userId });
+const getMatch = async (tournamentId, roundNumber, userId) => {
+    let match = await Match.findOne ({ tournamentId, roundNumber, home: userId });
 
     if (!match) {
-        match = await Match.findOne ({ tournamentId, away: userId });
+        match = await Match.findOne ({ tournamentId, roundNumber, away: userId });
     }
 
     return match;

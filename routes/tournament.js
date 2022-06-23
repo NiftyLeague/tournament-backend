@@ -171,6 +171,7 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     if (round.joinedUserIds.length % 2 == 0) {
         let match = await new Match ({
             tournamentId: round.tournamentId,
+            roundNumber: round.roundNumber,
             isStarted: false,
             home: round.joinedUserIds[round.joinedUserIds.length - 1],
             away: round.joinedUserIds[round.joinedUserIds.length - 2]
@@ -182,14 +183,14 @@ router.post ('/joinLobby/:tournamentId', async (req, res, next) => {
     res.json ({ success: true, requestType: requestTypes.JOINLOBBY, round, player, timeLeft: getSecondsLeft (tournament) });
 });
 
-router.get ('/matchByTournamentId/:tournamentId/:userId', async (req, res, next) => {
-    const { tournamentId, userId } = req.params;
+router.get ('/matchByTournamentId/:tournamentId/:roundNumber/:userId', async (req, res, next) => {
+    const { tournamentId, roundNumber, userId } = req.params;
 
-    if (!tournamentId || !userId) {
+    if (!tournamentId || !roundNumber || !userId) {
         return res.json ({ success: false, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, error: 'Parameters not defined' });
     }
 
-    const match = await getMatch (tournamentId, userId);
+    const match = await getMatch (tournamentId, roundNumber, userId);
 
     if (!match) {
         return res.json ({ success: false, requestType: requestTypes.MATCH_BY_TOURNAMENT_ID, error: 'Match not found' });
