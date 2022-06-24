@@ -269,7 +269,7 @@ router.post ('/matchEnded/:tournamentId', async (req, res, next) => {
     }
 
     const player = await getPlayerById (userIdMaster);
-    const tournament = await getTournamentById (tournamentId);
+    let tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
         return res.json ({ success: false, requestType: requestTypes.MATCH_ENDED, error: 'Tournament not found', tournament, player });
