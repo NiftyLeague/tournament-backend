@@ -24,7 +24,7 @@ router.post ('/setUsername/:userId', async (req, res, next) => {
         return res.json ({ success: false, requestType: requestTypes.PLAYER_SET_USERNAME, error: 'Parameters not defined' });
     }
 
-    const player = await getPlayerById (userId);
+    let player = await getPlayerById (userId);
 
     if (!player) {
         return res.json ({ success: false, requestType: requestTypes.PLAYER_SET_USERNAME, error: 'Player not found' });
@@ -43,7 +43,7 @@ router.post ('/leave', async (req, res, next) => {
         return res.json ({ success: false, requestType: requestTypes.BY_ID, error: 'Parameters not defined' });
     }
 
-    const player = await getPlayerById (userId);
+    let player = await getPlayerById (userId);
 
     player.status = playerStatus.UNREGISTERED;
     player.tournamentId = '';
