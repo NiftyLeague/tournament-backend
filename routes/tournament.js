@@ -209,7 +209,7 @@ router.get ('/getUsernames/:tournamentId', async (req, res, next) => {
     const tournament = await getTournamentById (tournamentId);
 
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.GET_USERNAMES, error: 'Tournament not found', tournament, player });
+        return res.json ({ success: false, requestType: requestTypes.GET_USERNAMES, error: 'Tournament not found', tournament });
     }
 
     let players = [];
