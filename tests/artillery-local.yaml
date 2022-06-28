@@ -1,0 +1,18 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      name: Warm up
+    - duration: 30
+      arrivalRate: 5
+      rampTo: 30
+      name: Ramp up
+    - duration: 60
+      arrivalRate: 30
+      name: Sustained load
+scenarios:
+  - name: "Search for open tournaments"
+    flow:
+      - get:
+          url: "/tournament/openTournament/sahin"

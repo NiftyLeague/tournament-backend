@@ -9,6 +9,8 @@ const { getPlayerById, signup, signout, disQualify, joinRound } = require ('../s
 const { getSecondsLeft } = require ('../services/time-service');
 const { getMatch } = require ('../services/match-service');
 
+const { getWatchers } = require ('../socket');
+
 router.get ('/byId/:tournamentId/:userId', async (req, res, next) => {
     const { tournamentId, userId } = req.params;
 
@@ -41,11 +43,15 @@ router.get ('/openTournament/:userId', async (req, res, next) => {
     const player = await getPlayerById (userId);
     const tournament = await getOpenTournament ();
 
+    let sockets = await getWatchers ('');
+
     if (!tournament) {
-        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT, error: 'Tournament not found', player });
+        return res.json ({ success: false, requestType: requestTypes.OPEN_TOURNAMENT, error: 'Tournament not found', player, watching: sockets.length });
     }
 
-    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament, player, timeLeft: getSecondsLeft (tournament) });
+    sockets = await getWatchers (tournament._id);
+
+    res.json ({ success: true, requestType: requestTypes.OPEN_TOURNAMENT, tournament, player, timeLeft: getSecondsLeft (tournament), watching: sockets.length });
 });
 
 router.post ('/signup', async (req, res, next) => {

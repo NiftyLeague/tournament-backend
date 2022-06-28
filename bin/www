@@ -90,3 +90,11 @@ function onListening() {
   logger.log ({ log: 'Listening on ' + bind });
   // debug('Listening on ' + bind);
 }
+
+
+/** 
+ * Socket
+ */
+
+const { setUpSocket } = require ('../socket');
+setUpSocket (server);
