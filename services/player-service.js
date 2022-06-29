@@ -3,6 +3,8 @@ const logger = require('../logger');
 const { playerStatus } = require ('../constants');
 var { Player } = require ('../schema/index');
 
+const { removePlayer } = require ('../socket');
+
 const getPlayerById = async (userId) => {
     let player = await Player.findOne ({ userId });
 
@@ -82,6 +84,8 @@ const leaveTournament = async (userId, tournamentId) => {
     player.status = playerStatus.UNREGISTERED;
 
     await player.save ();
+
+    await removePlayer (tournamentId, userId);
 }
 
 module.exports = {

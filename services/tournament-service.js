@@ -3,6 +3,8 @@ const { leaveTournament, disQualify } = require ('../services/player-service');
 const { getRoundById } = require ('../services/round-service');
 var { Tournament, Round } = require ('../schema/index');
 
+const { removeUnregistered, removeEveryone, startNewRound } = require ('../socket');
+
 const asyncTimeout = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -37,6 +39,10 @@ const terminateIfUnderRegistered = async (tournamentId) => {
     for (let step = 0; step < tournament.registeredUserIds.length; step++) {
         await leaveTournament (tournament.registeredUserIds[step], tournamentId);
     }
+
+    await asyncTimeout (1000); // 1 sec
+
+    removeEveryone (tournamentId);
 }
 
 const startNextRoundAsync = async (tournamentId, waitTime) => {
@@ -58,12 +64,18 @@ const startNextRoundAsync = async (tournamentId, waitTime) => {
         roundNumber: tournament.roundNumber + 1
     });
     await round.save ();
+
+    if (round.roundNumber == 1) {
+        await removeUnregistered (tournamentId, tournament.eligibleUserIds);
+    }
     
     tournament.status = tournamentStatus.LOBBY;
     tournament.roundNumber = tournament.roundNumber + 1;
     tournament.eligibleUserIds = [];
     tournament.nextStepTime = Date.now() + ROUND_START_TIME;
     await tournament.save ();
+
+    await startNewRound (tournamentId, tournament.roundNumber);
 
     closeRoundAsync (tournamentId, round._id, ROUND_START_TIME);
 }
@@ -85,6 +97,10 @@ const closeRoundAsync = async (tournamentId, roundId, waitTime) => {
         
         round.status = roundStatus.CLOSED;
         await round.save ();
+        
+        await asyncTimeout (1000); // 1 sec
+
+        removeEveryone (tournamentId);
 
         return;
     }

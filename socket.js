@@ -62,8 +62,6 @@ const setUpSocket = (server) => {
                 
                 socket.emit("info", "watchTournament - added to room, #: " + inRoomIds);
             }
-
-            console.log (socket.rooms);
         });
 
         socket.on("unwatchTournament", async (tournamentId) => {
@@ -83,8 +81,6 @@ const setUpSocket = (server) => {
             } else {
                 socket.emit("info", "unwatchTournament - not in room, #: " + inRoomIds);
             }
-
-            console.log (socket.rooms);
         });
     });
 
@@ -130,7 +126,59 @@ const getWatchers = async (tournamentId) => {
     return sockets;
 }
 
+const removeUnregistered = async (tournamentId, eligibleUserIds) => {
+    const eligibleSocketIds = await getSocketsFromIds (eligibleUserIds);
+
+    let sockets = await io.in ('' + tournamentId).fetchSockets ();
+    for (const socket of sockets) {
+        const index = eligibleSocketIds.indexOf (socket.id);
+        if (index == -1) {
+            io.in (socket.id).socketsLeave ('' + tournamentId);
+        }
+    }
+}
+
+const removeEveryone = (tournamentId) => {
+    io.socketsLeave('' + tournamentId);
+}
+
+const removePlayer = async (tournamentId, userId) => {
+    await client.connect ();
+    
+    const socketId = await client.get (userId);
+    
+    io.in (socketId).socketsLeave ('' + tournamentId);
+
+    await client.quit ();
+}
+
+const startNewRound = async (tournamentId, roundNumber) => {
+    let sockets = await io.in ('' + tournamentId).fetchSockets ();
+    for (const socket of sockets) {
+        socket.emit("startNewRound", { roundNumber });
+    }
+}
+
+const getSocketsFromIds = async (eligibleUserIds) => {
+    await client.connect ();
+
+    let eligibleSocketIds = [];
+    for (const eligibleUserId of eligibleUserIds) {
+        const socketId = await client.get (eligibleUserId);
+
+        eligibleSocketIds.push (socketId);
+    }
+
+    await client.quit ();
+
+    return eligibleSocketIds;
+}
+
 module.exports = {
     getWatchers,
-    setUpSocket
+    setUpSocket,
+    removeUnregistered,
+    removeEveryone,
+    removePlayer,
+    startNewRound
 };
