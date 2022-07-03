@@ -58,7 +58,7 @@ const setUpSocket = (server) => {
             } else {
                 io.in(socket.id).socketsJoin(tournamentId);
 
-                sockets = await io.in(tournamentId).fetchSockets();
+                // sockets = await io.in(tournamentId).fetchSockets();
                 
                 socket.emit("info", "watchTournament - added to room, #: " + inRoomIds);
             }
@@ -75,7 +75,7 @@ const setUpSocket = (server) => {
             if (isInRoom) {
                 io.in(socket.id).socketsLeave(tournamentId);
                 
-                sockets = await io.in(tournamentId).fetchSockets();
+                // sockets = await io.in(tournamentId).fetchSockets();
 
                 socket.emit("info", "unwatchTournament - left room, #: " + inRoomIds);
             } else {
@@ -124,6 +124,10 @@ const getWatchers = async (tournamentId) => {
     console.log (tournamentId + ", " + sockets.length);
 
     return sockets;
+}
+
+const emitCancelled = (tournamentId) => {
+    io.in ('' + tournamentId).emit("tournamentCancelled");
 }
 
 const removeUnregistered = async (tournamentId, eligibleUserIds) => {
@@ -180,5 +184,6 @@ module.exports = {
     removeUnregistered,
     removeEveryone,
     removePlayer,
-    startNewRound
+    startNewRound,
+    emitCancelled
 };

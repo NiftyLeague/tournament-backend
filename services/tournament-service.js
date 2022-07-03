@@ -3,7 +3,7 @@ const { leaveTournament, disQualify } = require ('../services/player-service');
 const { getRoundById } = require ('../services/round-service');
 var { Tournament, Round } = require ('../schema/index');
 
-const { removeUnregistered, removeEveryone, startNewRound } = require ('../socket');
+const { removeUnregistered, removeEveryone, startNewRound, emitCancelled } = require ('../socket');
 
 const asyncTimeout = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -39,6 +39,8 @@ const terminateIfUnderRegistered = async (tournamentId) => {
     for (let step = 0; step < tournament.registeredUserIds.length; step++) {
         await leaveTournament (tournament.registeredUserIds[step], tournamentId);
     }
+    
+    emitCancelled (tournamentId);
 
     await asyncTimeout (1000); // 1 sec
 
